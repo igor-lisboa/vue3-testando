@@ -39,14 +39,13 @@ export default defineComponent({
     let reverse: boolean = false;
     let chess = ref({});
     let board = ref<
-      | {
-          ladoId: number;
-          valor: number;
-          tipo: string;
-          passosHabilitados: number;
-          movimentacao: { direcao: string; opcoes: string[] }[];
-        }[]
-      | null[]
+      ({
+        ladoId: number;
+        valor: number;
+        tipo: string;
+        passosHabilitados: number;
+        movimentacao: { direcao: string; opcoes: string[] }[];
+      } | null)[]
     >([]);
     let equivalenceTable = ref([]);
     let pieces = ref([]);
@@ -69,15 +68,13 @@ export default defineComponent({
           };
         });
 
-      const board:
-        | {
-            ladoId: number;
-            valor: number;
-            tipo: string;
-            passosHabilitados: number;
-            movimentacao: { direcao: string; opcoes: string[] }[];
-          }[]
-        | null[] = chess.tabuleiro.casas.flat();
+      const board: ({
+        ladoId: number;
+        valor: number;
+        tipo: string;
+        passosHabilitados: number;
+        movimentacao: { direcao: string; opcoes: string[] }[];
+      } | null)[] = chess.tabuleiro.casas.flat();
 
       return { chess, board };
     };
