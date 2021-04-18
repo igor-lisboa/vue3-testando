@@ -5,6 +5,11 @@
       v-bind:key="index"
       :class="
         'board-house ' +
+        (possibleMoves.includes(index)
+          ? item != null
+            ? 'red '
+            : 'green '
+          : '') +
         (Math.floor(index / 8) % 2 == (index % 2) % 2
           ? reverse
             ? 'white'
@@ -13,8 +18,9 @@
           ? 'black'
           : 'white')
       "
+      @click="getPossibleMoves(index)"
     >
-      {{ item != null ? item.tipo : "" }}
+      {{ item != null ? getPiece(item.tipo, item.ladoId) : "" }}
     </div>
   </div>
 </template>
@@ -28,15 +34,16 @@ export default defineComponent({
   setup: () => {
     const route = useRoute();
     const router = useRouter();
-    const ladoId: number = 1;
+    const sideId: number = 1;
     const chessId: string = route.params.id.toString();
     let reverse: boolean = false;
     let chess = ref({});
     let board = ref([]);
     let equivalenceTable = ref([]);
     let pieces = ref([]);
+    let possibleMoves = ref<number[]>([]);
 
-    if (ladoId == 1) {
+    if (sideId == 1) {
       reverse = true;
     }
 
@@ -53,7 +60,15 @@ export default defineComponent({
           };
         });
 
-      const board: never[] = chess.tabuleiro.casas.flat();
+      const board:
+        | {
+            ladoId: number;
+            valor: number;
+            tipo: string;
+            passosHabilitados: number;
+            movimentacao: { direcao: string; opcoes: string[] }[];
+          }[]
+        | null = chess.tabuleiro.casas.flat();
 
       return { chess, board };
     };
@@ -82,6 +97,50 @@ export default defineComponent({
         });
     };
 
+    const getPiece = (type: string, side: number) => {
+      const piece = pieces.value.find((piece) => piece["nome"] == type);
+      if (piece != undefined) {
+        if (side == 0) {
+          return piece["unicodeBranco"];
+        }
+        return piece["unicodePreto"];
+      }
+    };
+
+    const getPossibleMoves = async (boardHouseIndex: number) => {
+      possibleMoves.value = [];
+      return await api
+        .get(
+          `/jogos/${chessId}/pecas/${equivalenceTable.value[boardHouseIndex]["casa"]}/possiveis-jogadas`,
+          { headers: { lado: sideId } }
+        )
+        .then((res) => {
+          res.data.data.forEach(
+            (possibleMove: {
+              casaDestino: { casa: string; coluna: number; linha: number };
+            }) => {
+              const item:
+                | {
+                    casa: string;
+                    linha: number;
+                    coluna: number;
+                  }
+                | undefined = equivalenceTable.value.find(
+                (boardHouse) =>
+                  boardHouse["casa"] == possibleMove["casaDestino"]["casa"]
+              );
+              if (item != undefined) {
+                possibleMoves.value.push(equivalenceTable.value.indexOf(item));
+              }
+            }
+          );
+        })
+        .catch((err) => {
+          alert(err.response.data.message);
+          return [];
+        });
+    };
+
     onMounted(async () => {
       let game = await getGame(chessId);
       equivalenceTable.value = await getEquivalenceTable();
@@ -96,25 +155,42 @@ export default defineComponent({
 
       // if is the black side revert
       if (reverse) {
-        equivalenceTable.value.reverse();
         board.value.reverse();
+        equivalenceTable.value.reverse();
       }
     });
 
-    return { chessId, board, chess, reverse };
+    return {
+      chessId,
+      board,
+      chess,
+      reverse,
+      getPiece,
+      getPossibleMoves,
+      possibleMoves,
+    };
   },
 });
 </script>
 
 <style scoped>
 .chessboard {
-  width: 640px;
-  height: 640px;
-  margin: 20px;
-  border: 25px solid #333;
+  width: 655px;
+  height: 655px;
+  margin: auto;
+}
+
+.board-house:hover {
+  background-color: lightblue;
+}
+
+.board-house:active {
+  background-color: blueviolet;
 }
 
 .board-house {
+  transition: background-color 0.5s ease;
+  cursor: pointer;
   float: left;
   width: 80px;
   height: 80px;
@@ -122,6 +198,7 @@ export default defineComponent({
   text-align: center;
   display: table-cell;
   vertical-align: middle;
+  border: 0.5px solid black;
 }
 
 .black {
@@ -129,5 +206,13 @@ export default defineComponent({
 }
 .white {
   background-color: #fff;
+}
+
+.green {
+  background-color: greenyellow;
+}
+
+.red {
+  background-color: red;
 }
 </style>
