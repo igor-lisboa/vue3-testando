@@ -147,7 +147,7 @@ export default defineComponent({
         });
     };
 
-    onMounted(async () => {
+    const populateGame = async () => {
       let game = await getGame(chessId);
       equivalenceTable.value = await getEquivalenceTable();
       pieces.value = await getPieces();
@@ -161,9 +161,13 @@ export default defineComponent({
 
       // if is the black side revert
       if (reverse) {
-        board.value.reverse();
         equivalenceTable.value.reverse();
+        board.value.reverse();
       }
+    };
+
+    onMounted(async () => {
+      await populateGame();
     });
 
     return {
