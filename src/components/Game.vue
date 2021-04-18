@@ -38,7 +38,16 @@ export default defineComponent({
     const chessId: string = route.params.id.toString();
     let reverse: boolean = false;
     let chess = ref({});
-    let board = ref([]);
+    let board = ref<
+      | {
+          ladoId: number;
+          valor: number;
+          tipo: string;
+          passosHabilitados: number;
+          movimentacao: { direcao: string; opcoes: string[] }[];
+        }[]
+      | null[]
+    >([]);
     let equivalenceTable = ref([]);
     let pieces = ref([]);
     let possibleMoves = ref<number[]>([]);
@@ -68,7 +77,7 @@ export default defineComponent({
             passosHabilitados: number;
             movimentacao: { direcao: string; opcoes: string[] }[];
           }[]
-        | null = chess.tabuleiro.casas.flat();
+        | null[] = chess.tabuleiro.casas.flat();
 
       return { chess, board };
     };
