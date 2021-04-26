@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
+    "bootstrap": "^4.6.0",
+    "bootstrap-vue": "^2.21.2",
     "vue": "^3.0.5",
     "vue-router": "^4.0.6"
   },
