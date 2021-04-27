@@ -44,7 +44,10 @@
 
   <hr />
   <h2>OU</h2>
-  <button class="btn btn-lg btn-light fw-bold border-white mt-3">
+  <button
+    class="btn btn-lg btn-light fw-bold border-white mt-3"
+    @click="enterInSomeRoom"
+  >
     Entre em uma sala
   </button>
 </template>
@@ -75,6 +78,7 @@ export default defineComponent({
       { id: 1, ms: 300000, txt: "5 Minutos" },
       { id: 2, ms: 600000, txt: "10 Minutos" },
       { id: 3, ms: 900000, txt: "15 Minutos" },
+      { id: 4, ms: 3600000, txt: "1 Hora" },
     ];
 
     const getGameTypes = async () => {
@@ -104,6 +108,13 @@ export default defineComponent({
         });
     };
 
+    const enterInSomeRoom = () => {
+      const roomId = prompt("Em qual sala você deseja entrar?");
+      if (roomId != null && roomId != undefined && roomId != "") {
+        router.push({ name: "game", params: { id: roomId } });
+      }
+    };
+
     const populateGameTypes = async () => {
       types.value = await getGameTypes();
     };
@@ -118,6 +129,7 @@ export default defineComponent({
       shiftTimes,
       shiftTimeChoosed,
       setShiftTime,
+      enterInSomeRoom,
     };
   },
 });
