@@ -56,7 +56,14 @@ export default defineComponent({
   name: "Home",
   setup: () => {
     const router = useRouter();
-    let types = ref([]);
+    let types = ref<
+      {
+        id: number;
+        integranteLadoTipo: {
+          nome: string;
+        }[];
+      }[]
+    >([]);
     const shiftTimeChoosed = ref(-1);
 
     const setShiftTime = (shiftTime: number) => {
