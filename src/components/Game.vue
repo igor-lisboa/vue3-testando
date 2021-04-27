@@ -20,7 +20,7 @@
       "
       @click="getPossibleMoves(index)"
     >
-      {{ item != null ? getPiece(item.tipo, item.ladoId) : "" }}
+      {{ item != null ? getPiece(item) : null }}
     </div>
   </div>
 </template>
@@ -37,16 +37,17 @@ export default defineComponent({
     const sideId: number = 1;
     const chessId: string = route.params.id.toString();
     let reverse: boolean = false;
-    let chess = ref({});
-    let board = ref<
-      ({
-        ladoId: number;
-        valor: number;
-        tipo: string;
-        passosHabilitados: number;
-        movimentacao: { direcao: string; opcoes: string[] }[];
-      } | null)[]
-    >([]);
+    let chess = ref<{
+      id: number;
+      acoesSolicitadas: string[];
+      chequeLadoAtual: boolean;
+      empatePropostoPeloLadoId: number;
+      tipoJogo: string;
+      tabuleiro: (string | null)[][];
+      tempoDeTurnoEmMilisegundos: number;
+      finalizado: string | null;
+    } | null>(null);
+    let board = ref<(string | null)[]>([]);
     let equivalenceTable = ref([]);
     let pieces = ref([]);
     let possibleMoves = ref<number[]>([]);
@@ -56,25 +57,29 @@ export default defineComponent({
     }
 
     const getGame = async (gameId: string) => {
-      const chess = await api
-        .get(`/jogos/${gameId}`)
+      const chess: {
+        id: number;
+        acoesSolicitadas: string[];
+        chequeLadoAtual: boolean;
+        empatePropostoPeloLadoId: number;
+        tipoJogo: string;
+        tabuleiro: (string | null)[][];
+        tempoDeTurnoEmMilisegundos: number;
+        finalizado: string | null;
+      } | null = await api
+        .get(`/jogos/${gameId}/simples?tabuleiroSuperSimplificado=true`)
         .then((res) => {
           return res.data.data;
         })
         .catch((err) => {
           alert(err.response.data.message);
-          return {
-            tabuleiro: { casas: [] },
-          };
+          return null;
         });
 
-      const board: ({
-        ladoId: number;
-        valor: number;
-        tipo: string;
-        passosHabilitados: number;
-        movimentacao: { direcao: string; opcoes: string[] }[];
-      } | null)[] = chess.tabuleiro.casas.flat();
+      let board: (string | null)[] = [];
+      if (chess != null) {
+        board = chess.tabuleiro.flat();
+      }
 
       return { chess, board };
     };
@@ -103,10 +108,11 @@ export default defineComponent({
         });
     };
 
-    const getPiece = (type: string, side: number) => {
-      const piece = pieces.value.find((piece) => piece["nome"] == type);
+    const getPiece = (item: string) => {
+      const itemParts = item.split("-");
+      const piece = pieces.value.find((piece) => piece["nome"] == itemParts[0]);
       if (piece != undefined) {
-        if (side == 0) {
+        if (parseInt(itemParts[1]) == 0) {
           return piece["unicodeBranco"];
         }
         return piece["unicodePreto"];
@@ -157,6 +163,9 @@ export default defineComponent({
 
       if (board.value.length == 0) {
         router.push({ name: "home" });
+      }
+
+      if (chess.value.finalizado != null) {
       }
 
       // if is the black side revert
