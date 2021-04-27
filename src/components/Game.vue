@@ -1,5 +1,5 @@
 <template>
-  <div class="chessboard">
+  <div v-if="chess?.finalizado != null" class="chessboard">
     <div
       v-for="(item, index) in board"
       v-bind:key="index"
@@ -22,6 +22,9 @@
     >
       {{ item != null ? getPiece(item) : null }}
     </div>
+  </div>
+  <div v-else>
+    <h1>{{ chess?.finalizado }}</h1>
   </div>
 </template>
 
@@ -163,9 +166,6 @@ export default defineComponent({
 
       if (board.value.length == 0) {
         router.push({ name: "home" });
-      }
-
-      if (chess.value.finalizado != null) {
       }
 
       // if is the black side revert
