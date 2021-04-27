@@ -2,11 +2,11 @@
   <div class="d-flex h-100 text-center text-white bg-dark">
     <div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
       <header class="mb-auto row">
-        <router-link
-          :to="{ name: 'home' }"
-          class="float-md-start mb-0"
-          ><h3>{{ vueAppTitle }}</h3></router-link
-        >
+        <router-link :to="{ name: 'home' }">
+          <h3 class="float-md-start mb-0 text-white">
+            {{ vueAppTitle }}
+          </h3>
+        </router-link>
       </header>
 
       <main class="px-3">
