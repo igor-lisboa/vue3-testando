@@ -100,7 +100,7 @@ export default defineComponent({
           tempoDeTurnoEmMilisegundos: shiftTimeChoosed.value,
         })
         .then((res) => {
-          router.push({ name: "game", params: { id: res.data.data.id } });
+          router.push({ name: "selectSide", params: { id: res.data.data.id } });
         })
         .catch((err) => {
           alert(err.response.data.message);
@@ -111,7 +111,7 @@ export default defineComponent({
     const enterInSomeRoom = () => {
       const roomId = prompt("Em qual sala você deseja entrar?");
       if (roomId != null && roomId != undefined && roomId != "") {
-        router.push({ name: "game", params: { id: roomId } });
+        router.push({ name: "selectSide", params: { id: roomId } });
       }
     };
 

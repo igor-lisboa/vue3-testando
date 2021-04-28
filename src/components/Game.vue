@@ -1,5 +1,5 @@
 <template>
-  <div v-if="chess?.finalizado != null" class="chessboard">
+  <div v-if="chess?.finalizado == null" class="chessboard">
     <div
       v-for="(item, index) in board"
       v-bind:key="index"
@@ -37,10 +37,10 @@ export default defineComponent({
   setup: () => {
     const route = useRoute();
     const router = useRouter();
-    const sideId: number = 1;
-    const chessId: string = route.params.id.toString();
+    const sideId: number = parseInt(route.params.sideId.toString());
+    const chessId: number = parseInt(route.params.id.toString());
     let reverse: boolean = false;
-    let chess = ref<{
+    const chess = ref<{
       id: number;
       acoesSolicitadas: string[];
       chequeLadoAtual: boolean;
@@ -50,16 +50,16 @@ export default defineComponent({
       tempoDeTurnoEmMilisegundos: number;
       finalizado: string | null;
     } | null>(null);
-    let board = ref<(string | null)[]>([]);
-    let equivalenceTable = ref([]);
-    let pieces = ref([]);
-    let possibleMoves = ref<number[]>([]);
+    const board = ref<(string | null)[]>([]);
+    const equivalenceTable = ref([]);
+    const pieces = ref([]);
+    const possibleMoves = ref<number[]>([]);
 
     if (sideId == 1) {
       reverse = true;
     }
 
-    const getGame = async (gameId: string) => {
+    const getGame = async (gameId: number) => {
       const chess: {
         id: number;
         acoesSolicitadas: string[];

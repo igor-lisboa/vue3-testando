@@ -2,6 +2,8 @@ import { createWebHistory, createRouter } from 'vue-router';
 
 import Home from '../components/Home.vue'
 import Game from '../components/Game.vue'
+import SelectSide from '../components/SelectSide.vue'
+
 
 const routes = [
     {
@@ -11,6 +13,11 @@ const routes = [
     },
     {
         path: '/game/:id',
+        name: 'selectSide',
+        component: SelectSide
+    },
+    {
+        path: '/game/:id/side/:sideId',
         name: 'game',
         component: Game
     },
