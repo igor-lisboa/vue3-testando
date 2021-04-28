@@ -6,20 +6,27 @@
         v-bind:key="index"
         :class="
           'board-house ' +
-          (possibleMoves.includes(index)
-            ? item != null
+          (equivalenceTable[index].casa == originMove?.casa ? 'yellow ' : '') +
+          (possibleMoves.find(
+            (possibleMove) =>
+              possibleMove.casaDestino.casa == equivalenceTable[index].casa
+          ) != undefined
+            ? possibleMoves.find(
+                (possibleMove) =>
+                  possibleMove.casaDestino.casa == equivalenceTable[index].casa
+              )?.captura == true
               ? 'red '
               : 'green '
             : '') +
           (Math.floor(index / 8) % 2 == (index % 2) % 2
-            ? reverse
+            ? sideId == 1
               ? 'white'
               : 'black'
-            : reverse
+            : sideId == 1
             ? 'black'
             : 'white')
         "
-        @click="getPossibleMoves(index)"
+        @click="getPossibleMovesOrMakeMove(index)"
       >
         {{ item != null ? getPiece(item) : null }}
       </div>
@@ -47,7 +54,6 @@ export default defineComponent({
     const loading = ref(false);
     const sideId: number = parseInt(route.params.sideId.toString());
     const chessId: number = parseInt(route.params.id.toString());
-    let reverse: boolean = false;
     const chess = ref<{
       id: number;
       acoesSolicitadas: string[];
@@ -59,13 +65,35 @@ export default defineComponent({
       finalizado: string | null;
     } | null>(null);
     const board = ref<(string | null)[]>([]);
-    const equivalenceTable = ref([]);
+    const equivalenceTable = ref<
+      {
+        casa: string;
+        linha: number;
+        coluna: number;
+      }[]
+    >([]);
     const pieces = ref([]);
-    const possibleMoves = ref<number[]>([]);
-
-    if (sideId == 1) {
-      reverse = true;
-    }
+    const possibleMoves = ref<
+      {
+        casaOrigem: {
+          casa: string;
+          linha: number;
+          coluna: number;
+        };
+        casaDestino: {
+          casa: string;
+          linha: number;
+          coluna: number;
+        };
+        nome: string | null;
+        captura: boolean;
+      }[]
+    >([]);
+    const originMove = ref<{
+      casa: string;
+      linha: number;
+      coluna: number;
+    } | null>(null);
 
     const getGame = async (gameId: number) => {
       loading.value = true;
@@ -99,12 +127,15 @@ export default defineComponent({
     };
 
     const getPieces = async () => {
+      loading.value = true;
       return await api
         .get(`/tipos-de-peca`)
         .then((res) => {
+          loading.value = false;
           return res.data.data;
         })
         .catch((err) => {
+          loading.value = false;
           alert(err.response.data.message);
           return [];
         });
@@ -136,60 +167,68 @@ export default defineComponent({
       }
     };
 
-    const getPossibleMoves = async (boardHouseIndex: number) => {
-      loading.value = true;
-      possibleMoves.value = [];
-      return await api
-        .get(
-          `/jogos/${chessId}/pecas/${equivalenceTable.value[boardHouseIndex]["casa"]}/possiveis-jogadas`,
-          { headers: { lado: sideId } }
-        )
-        .then((res) => {
-          loading.value = false;
-          res.data.data.forEach(
-            (possibleMove: {
-              casaDestino: { casa: string; coluna: number; linha: number };
-            }) => {
-              const item:
-                | {
-                    casa: string;
-                    linha: number;
-                    coluna: number;
-                  }
-                | undefined = equivalenceTable.value.find(
-                (boardHouse) =>
-                  boardHouse["casa"] == possibleMove["casaDestino"]["casa"]
-              );
-              if (item != undefined) {
-                possibleMoves.value.push(equivalenceTable.value.indexOf(item));
-              }
-            }
-          );
-        })
-        .catch((err) => {
-          loading.value = false;
-          alert(err.response.data.message);
-          return [];
-        });
+    const getPossibleMovesOrMakeMove = async (boardHouseIndex: number) => {
+      const desiredItem = equivalenceTable.value[boardHouseIndex];
+      if (
+        possibleMoves.value.find(
+          (possibleMove) => possibleMove.casaDestino.casa == desiredItem.casa
+        ) != undefined &&
+        originMove.value != null
+      ) {
+        await api
+          .post(
+            `/jogos/${chessId}/pecas/${originMove.value.casa}/move/${desiredItem.casa}`,
+            { headers: { lado: sideId } }
+          )
+          .then((res) => {
+            console.log(res.data);
+            originMove.value = null;
+            possibleMoves.value = [];
+          })
+          .catch((err) => {
+            alert(err.response.data.message);
+            possibleMoves.value = [];
+            originMove.value = null;
+          });
+      } else {
+        originMove.value = null;
+        possibleMoves.value = [];
+        await api
+          .get(
+            `/jogos/${chessId}/pecas/${desiredItem.casa}/possiveis-jogadas`,
+            { headers: { lado: sideId } }
+          )
+          .then((res) => {
+            possibleMoves.value = res.data.data;
+            originMove.value = desiredItem;
+          })
+          .catch((err) => {
+            alert(err.response.data.message);
+            possibleMoves.value = [];
+            originMove.value = null;
+          });
+      }
     };
 
     const populateGame = async () => {
-      let game = await getGame(chessId);
-      equivalenceTable.value = await getEquivalenceTable();
-      pieces.value = await getPieces();
+      const game = await getGame(chessId);
+      let equivalenceTableGot = await getEquivalenceTable();
+      let gameBoard = game.board;
 
-      chess.value = game.chess;
-      board.value = game.board;
-
-      if (board.value.length == 0) {
+      if (gameBoard.length == 0) {
         router.push({ name: "home" });
       }
 
       // if is the black side revert
-      if (reverse) {
-        equivalenceTable.value.reverse();
-        board.value.reverse();
+      if (sideId == 1) {
+        equivalenceTableGot = equivalenceTableGot.reverse();
+        gameBoard = gameBoard.reverse();
       }
+
+      pieces.value = await getPieces();
+      equivalenceTable.value = equivalenceTableGot;
+      board.value = gameBoard;
+      chess.value = game.chess;
     };
 
     onMounted(async () => {
@@ -198,13 +237,15 @@ export default defineComponent({
 
     return {
       chessId,
+      equivalenceTable,
       board,
       chess,
-      reverse,
+      sideId,
       getPiece,
-      getPossibleMoves,
+      getPossibleMovesOrMakeMove,
       possibleMoves,
       loading,
+      originMove,
     };
   },
 });
@@ -243,6 +284,10 @@ export default defineComponent({
 }
 .white {
   background-color: #fff;
+}
+
+.yellow {
+  background-color: yellow;
 }
 
 .green {

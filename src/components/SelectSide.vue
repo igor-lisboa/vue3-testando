@@ -54,15 +54,27 @@ export default defineComponent({
     const chessId: number = parseInt(route.params.id.toString());
     const emptySides = ref<{ id: number; lado: string }[]>([]);
 
-    const enterInGame = () => {
-      if (selectedSide.value != null) {
-        router.push({
-          name: "game",
-          params: { id: chessId, sideId: selectedSide.value },
+    const enterInGame = async () => {
+      loading.value = true;
+      await api
+        .post(`/jogos/${chessId}/jogadores`, {
+          ladoId: selectedSide.value,
+          tipoId: "0",
+        })
+        .then((res) => {
+          loading.value = false;
+          if (selectedSide.value != null) {
+            router.push({
+              name: "game",
+              params: { id: chessId, sideId: selectedSide.value },
+            });
+          }
+          return res.data.data;
+        })
+        .catch((err) => {
+          loading.value = false;
+          alert(err.response.data.message);
         });
-      } else {
-        alert("Selecione um lado para entrar no jogo!");
-      }
     };
 
     const getGameEmptySides = async () => {
