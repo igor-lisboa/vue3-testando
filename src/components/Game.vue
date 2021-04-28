@@ -353,13 +353,7 @@ export default defineComponent({
           movementOrigin: false,
           piece: getPiece(item),
           backgroundColor:
-            Math.floor(index / 8) % 2 == (index % 2) % 2
-              ? sideId == 1
-                ? "white"
-                : "black"
-              : sideId == 1
-              ? "black"
-              : "white",
+            Math.floor(index / 8) % 2 == (index % 2) % 2 ? "white" : "black",
         });
       });
       board.value = chessBoard;
