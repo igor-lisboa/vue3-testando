@@ -1,31 +1,38 @@
 <template>
-  <div v-if="chess?.finalizado == null" class="chessboard">
-    <div
-      v-for="(item, index) in board"
-      v-bind:key="index"
-      :class="
-        'board-house ' +
-        (possibleMoves.includes(index)
-          ? item != null
-            ? 'red '
-            : 'green '
-          : '') +
-        (Math.floor(index / 8) % 2 == (index % 2) % 2
-          ? reverse
-            ? 'white'
-            : 'black'
-          : reverse
-          ? 'black'
-          : 'white')
-      "
-      @click="getPossibleMoves(index)"
-    >
-      {{ item != null ? getPiece(item) : null }}
+  <template v-if="loading == false">
+    <div v-if="chess?.finalizado == null" class="chessboard">
+      <div
+        v-for="(item, index) in board"
+        v-bind:key="index"
+        :class="
+          'board-house ' +
+          (possibleMoves.includes(index)
+            ? item != null
+              ? 'red '
+              : 'green '
+            : '') +
+          (Math.floor(index / 8) % 2 == (index % 2) % 2
+            ? reverse
+              ? 'white'
+              : 'black'
+            : reverse
+            ? 'black'
+            : 'white')
+        "
+        @click="getPossibleMoves(index)"
+      >
+        {{ item != null ? getPiece(item) : null }}
+      </div>
     </div>
-  </div>
-  <div v-else>
-    <h1>{{ chess?.finalizado }}</h1>
-  </div>
+    <div v-else>
+      <h1>{{ chess?.finalizado }}</h1>
+    </div>
+  </template>
+  <template v-else>
+    <div class="spinner-border text-light" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </template>
 </template>
 
 <script lang="ts">
@@ -37,6 +44,7 @@ export default defineComponent({
   setup: () => {
     const route = useRoute();
     const router = useRouter();
+    const loading = ref(false);
     const sideId: number = parseInt(route.params.sideId.toString());
     const chessId: number = parseInt(route.params.id.toString());
     let reverse: boolean = false;
@@ -60,6 +68,7 @@ export default defineComponent({
     }
 
     const getGame = async (gameId: number) => {
+      loading.value = true;
       const chess: {
         id: number;
         acoesSolicitadas: string[];
@@ -72,9 +81,11 @@ export default defineComponent({
       } | null = await api
         .get(`/jogos/${gameId}/simples?tabuleiroSuperSimplificado=true`)
         .then((res) => {
+          loading.value = false;
           return res.data.data;
         })
         .catch((err) => {
+          loading.value = false;
           alert(err.response.data.message);
           return null;
         });
@@ -100,12 +111,15 @@ export default defineComponent({
     };
 
     const getEquivalenceTable = async () => {
+      loading.value = true;
       return await api
         .get(`/tabela-equivalencia`)
         .then((res) => {
+          loading.value = false;
           return res.data.data;
         })
         .catch((err) => {
+          loading.value = false;
           alert(err.response.data.message);
           return [];
         });
@@ -123,6 +137,7 @@ export default defineComponent({
     };
 
     const getPossibleMoves = async (boardHouseIndex: number) => {
+      loading.value = true;
       possibleMoves.value = [];
       return await api
         .get(
@@ -130,6 +145,7 @@ export default defineComponent({
           { headers: { lado: sideId } }
         )
         .then((res) => {
+          loading.value = false;
           res.data.data.forEach(
             (possibleMove: {
               casaDestino: { casa: string; coluna: number; linha: number };
@@ -151,6 +167,7 @@ export default defineComponent({
           );
         })
         .catch((err) => {
+          loading.value = false;
           alert(err.response.data.message);
           return [];
         });
@@ -187,6 +204,7 @@ export default defineComponent({
       getPiece,
       getPossibleMoves,
       possibleMoves,
+      loading,
     };
   },
 });

@@ -1,36 +1,43 @@
 <template>
-  <template v-if="emptySides.length > 0">
-    <h1>Escolha um lado disponível para esse jogo</h1>
-    <p class="lead">Clique na opção desejada</p>
+  <template v-if="loading == false">
+    <template v-if="emptySides.length > 0">
+      <h1>Escolha um lado disponível para esse jogo</h1>
+      <p class="lead">Clique na opção desejada</p>
 
-    <div class="mt-3">
-      <div class="btn-group" role="group">
-        <template v-for="emptySide in emptySides" v-bind:key="emptySide.id">
-          <input
-            type="radio"
-            class="btn-check"
-            :id="'btnSelectedSide' + emptySide.id"
-            :value="emptySide.id"
-            v-model="selectedSide"
-          />
-          <label
-            class="btn btn-outline-primary"
-            :for="'btnSelectedSide' + emptySide.id"
-            >{{ emptySide.lado }}</label
-          >
-        </template>
+      <div class="mt-3">
+        <div class="btn-group" role="group">
+          <template v-for="emptySide in emptySides" v-bind:key="emptySide.id">
+            <input
+              type="radio"
+              class="btn-check"
+              :id="'btnSelectedSide' + emptySide.id"
+              :value="emptySide.id"
+              v-model="selectedSide"
+            />
+            <label
+              class="btn btn-outline-primary"
+              :for="'btnSelectedSide' + emptySide.id"
+              >{{ emptySide.lado }}</label
+            >
+          </template>
+        </div>
       </div>
-    </div>
 
-    <button
-      class="btn btn-lg btn-light fw-bold border-white mt-3"
-      @click="enterInGame"
-    >
-      Entrar no Jogo
-    </button>
+      <button
+        class="btn btn-lg btn-light fw-bold border-white mt-3"
+        @click="enterInGame"
+      >
+        Entrar no Jogo
+      </button>
+    </template>
+    <template v-else>
+      <h1>Esse jogo não possui lados disponíveis</h1>
+    </template>
   </template>
   <template v-else>
-    <h1>Esse jogo não possui lados disponíveis</h1>
+    <div class="spinner-border text-light" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
   </template>
 </template>
 <script lang="ts">
@@ -42,6 +49,7 @@ export default defineComponent({
   setup: () => {
     const router = useRouter();
     const route = useRoute();
+    const loading = ref(false);
     const selectedSide = ref<number | null>(null);
     const chessId: number = parseInt(route.params.id.toString());
     const emptySides = ref<{ id: number; lado: string }[]>([]);
@@ -58,12 +66,15 @@ export default defineComponent({
     };
 
     const getGameEmptySides = async () => {
+      loading.value = true;
       return await api
         .get(`/jogos/${chessId}/lado-sem-jogador`)
         .then((res) => {
+          loading.value = false;
           return res.data.data;
         })
         .catch((err) => {
+          loading.value = false;
           alert(err.response.data.message);
           router.push({ name: "home" });
         });
@@ -81,6 +92,7 @@ export default defineComponent({
       selectedSide,
       emptySides,
       enterInGame,
+      loading,
     };
   },
 });
