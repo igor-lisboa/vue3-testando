@@ -22,6 +22,16 @@ const routes = [
         component: Game
     },
     {
+        path: '/game/:id/side/:sideId/promotePawn',
+        name: 'promotePawn',
+        component: Game
+    },
+    {
+        path: '/game/:id/side/:sideId/answerProposal/:type',
+        name: 'answerProposal',
+        component: Game
+    },
+    {
         path: '/:pathMatch(.*)*',
         redirect: { name: 'home' }
     }

@@ -87,8 +87,9 @@ export default defineComponent({
         })
         .catch((err) => {
           loading.value = false;
-          alert(err.response.data.message);
+          alert(err?.response?.data?.message);
           router.push({ name: "home" });
+          return [];
         });
     };
 

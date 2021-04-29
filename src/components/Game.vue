@@ -1,12 +1,14 @@
 <template>
   <template v-if="loading == false">
     <ul v-if="chess.acoesSolicitadas.length > 0">
-      <li
+      <template
         v-for="(acaoSolicitada, index) in chess?.acoesSolicitadas"
         v-bind:key="index"
       >
-        {{ acaoSolicitada }}
-      </li>
+        <li v-if="acaoSolicitada.ladoId == sideId">
+          {{ acaoSolicitada.acao }}
+        </li>
+      </template>
     </ul>
     <div
       v-if="chess.finalizado == null"
@@ -19,6 +21,11 @@
         v-bind:key="index"
         :class="
           'board-house ' +
+          (chess.chequeLadoAtual &&
+          item?.piece?.nome == 'Rei' &&
+          item?.piece?.ladoId == chess.ladoIdAtual
+            ? 'check-alert '
+            : '') +
           (item.movementOrigin ? 'yellow ' : '') +
           (item.possibleMovement ? 'green ' : '') +
           (item.catchPiece ? 'red ' : '') +
@@ -58,10 +65,12 @@ export default defineComponent({
     const chessId: number = parseInt(route.params.id.toString());
     const chess = ref<{
       id: number;
-      acoesSolicitadas: string[];
+      acoesSolicitadas: { acao: string; ladoId: number }[];
       chequeLadoAtual: boolean;
       empatePropostoPeloLadoId: number | null;
       tipoJogo: string;
+      ladoBrancoTempoMilisegundosRestante: number;
+      ladoPretoTempoMilisegundosRestante: number;
       tabuleiro: (string | null)[][];
       tempoDeTurnoEmMilisegundos: number;
       ladoIdAtual: number;
@@ -71,6 +80,8 @@ export default defineComponent({
       acoesSolicitadas: [],
       chequeLadoAtual: false,
       empatePropostoPeloLadoId: null,
+      ladoBrancoTempoMilisegundosRestante: -1,
+      ladoPretoTempoMilisegundosRestante: -1,
       tipoJogo: "",
       ladoIdAtual: 0,
       tabuleiro: [[]],
@@ -121,8 +132,9 @@ export default defineComponent({
         })
         .catch((err) => {
           loading.value = false;
-          alert(err.response.data.message);
+          alert(err?.response?.data?.message);
           router.push({ name: "home" });
+          return chess.value;
         });
     };
 
@@ -136,7 +148,7 @@ export default defineComponent({
         })
         .catch((err) => {
           loading.value = false;
-          alert(err.response.data.message);
+          alert(err?.response?.data?.message);
           return [];
         });
     };
@@ -151,7 +163,7 @@ export default defineComponent({
         })
         .catch((err) => {
           loading.value = false;
-          alert(err.response.data.message);
+          alert(err?.response?.data?.message);
           return [];
         });
     };
@@ -176,38 +188,19 @@ export default defineComponent({
       }
     };
 
-    const cleanPossibleMovements = (
-      boardMovementOrigin:
-        | {
-            house: string;
-            line: number;
-            column: number;
-            possibleMovement: boolean;
-            movementName: string | null;
-            catchPiece: boolean;
-            movementOrigin: boolean;
-            piece: {
-              nome: string;
-              ladoId: number;
-              unicode: string;
-            } | null;
-            backgroundColor: string;
-          }
-        | undefined
-    ) => {
-      if (boardMovementOrigin != undefined) {
-        const indexBoardMovementOrigin = board.value.indexOf(
-          boardMovementOrigin
-        );
-        board.value[indexBoardMovementOrigin].movementOrigin = false;
-        board.value
-          .filter((boardItem) => boardItem.possibleMovement == true)
-          .forEach((boardItemMovement) => {
-            boardItemMovement.possibleMovement = false;
-            boardItemMovement.catchPiece = false;
-            boardItemMovement.movementName = null;
-          });
-      }
+    const cleanPossibleMovements = () => {
+      board.value
+        .filter(
+          (boardItem) =>
+            boardItem.possibleMovement == true ||
+            boardItem.movementOrigin == true
+        )
+        .forEach((boardItemMovement) => {
+          boardItemMovement.possibleMovement = false;
+          boardItemMovement.catchPiece = false;
+          boardItemMovement.movementName = null;
+          boardItemMovement.movementOrigin = false;
+        });
     };
 
     const getPossibleMovesOrMakeMove = async (boardHouseIndex: number) => {
@@ -227,10 +220,10 @@ export default defineComponent({
         await api
           .post(
             `/jogos/${chessId}/pecas/${boardMovementOrigin.house}/move/${possibleMovementDestination.house}`,
+            {},
             { headers: { lado: sideId } }
           )
           .then(async (res) => {
-            console.log(res);
             await populateGame();
           })
           .catch(async (err) => {
@@ -238,7 +231,7 @@ export default defineComponent({
             await populateGame();
           });
       } else {
-        cleanPossibleMovements(boardMovementOrigin);
+        cleanPossibleMovements();
         await api
           .get(
             `/jogos/${chessId}/pecas/${desiredItem.casa}/possiveis-jogadas`,
@@ -282,7 +275,7 @@ export default defineComponent({
           })
           .catch((err) => {
             alert(err.response.data.message);
-            cleanPossibleMovements(boardMovementOrigin);
+            cleanPossibleMovements();
           });
       }
     };
@@ -305,15 +298,47 @@ export default defineComponent({
     const populateGame = async () => {
       const game: {
         id: number;
-        acoesSolicitadas: string[];
+        acoesSolicitadas: { acao: string; ladoId: number }[];
         chequeLadoAtual: boolean;
         empatePropostoPeloLadoId: number | null;
         tipoJogo: string;
         tabuleiro: (string | null)[][];
         tempoDeTurnoEmMilisegundos: number;
         ladoIdAtual: number;
+        ladoBrancoTempoMilisegundosRestante: number;
+        ladoPretoTempoMilisegundosRestante: number;
         finalizado: string | null;
       } = await getGame(chessId);
+
+      const requiredActionsForThisSide = game.acoesSolicitadas.filter(
+        (requiredAction) => requiredAction.ladoId == sideId
+      );
+      if (requiredActionsForThisSide.length > 0) {
+        const promotePawn = requiredActionsForThisSide.find(
+          (requiredAction) => requiredAction.acao == "promocaoPeao"
+        );
+        if (promotePawn != undefined) {
+          router.push({ name: "promotePawn", params: { id: chessId, sideId } });
+        }
+        const awnswerResetProposal = requiredActionsForThisSide.find(
+          (requiredAction) => requiredAction.acao == "responderPropostaReset"
+        );
+        if (awnswerResetProposal != undefined) {
+          router.push({
+            name: "answerProposal",
+            params: { id: chessId, sideId, type: "reset" },
+          });
+        }
+        const awnswerTieProposal = requiredActionsForThisSide.find(
+          (requiredAction) => requiredAction.acao == "responderPropostaEmpate"
+        );
+        if (awnswerTieProposal != undefined) {
+          router.push({
+            name: "answerProposal",
+            params: { id: chessId, sideId, type: "tie" },
+          });
+        }
+      }
 
       let gameBoardFlat: (string | null)[] = game.tabuleiro.flat();
 
@@ -435,5 +460,9 @@ export default defineComponent({
 
 .red {
   background-color: red;
+}
+
+.check-alert {
+  background-color: darkred;
 }
 </style>
