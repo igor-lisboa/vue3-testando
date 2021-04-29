@@ -1,15 +1,5 @@
 <template>
   <template v-if="loading == false">
-    <ul v-if="chess.acoesSolicitadas.length > 0">
-      <template
-        v-for="(acaoSolicitada, index) in chess?.acoesSolicitadas"
-        v-bind:key="index"
-      >
-        <li v-if="acaoSolicitada.ladoId == sideId">
-          {{ acaoSolicitada.acao }}
-        </li>
-      </template>
-    </ul>
     <div
       v-if="chess.finalizado == null"
       :class="
@@ -55,6 +45,7 @@
 import { defineComponent, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "../api/index";
+import io from "socket.io-client";
 export default defineComponent({
   name: "Game",
   setup: () => {
@@ -63,6 +54,9 @@ export default defineComponent({
     const loading = ref(false);
     const sideId: number = parseInt(route.params.sideId.toString());
     const chessId: number = parseInt(route.params.id.toString());
+    const socket = io(import.meta.env.VITE_API_CHESS?.toString(), {
+      query: { jogador: `${chessId}-${sideId}` },
+    });
     const chess = ref<{
       id: number;
       acoesSolicitadas: { acao: string; ladoId: number }[];
@@ -122,16 +116,46 @@ export default defineComponent({
       }[]
     >([]);
 
+    socket.on("adversarioEntrou", async () => {
+      await populateGame();
+    });
+
+    socket.on("uncaughtException", function (err) {
+      alert("Erro no socket");
+      console.log(err);
+    });
+
+    socket.on("jogadaRealizada", async () => {
+      await populateGame();
+    });
+
+    socket.on("empateProposto", async () => {
+      await populateGame();
+    });
+
+    socket.on("empatePropostoResposta", async () => {
+      await populateGame();
+    });
+
+    socket.on("jogoFinalizado", async () => {
+      await populateGame();
+    });
+
+    socket.on("resetProposto", async () => {
+      await populateGame();
+    });
+
+    socket.on("resetPropostoResposta", async () => {
+      await populateGame();
+    });
+
     const getGame = async (gameId: number) => {
-      loading.value = true;
       return await api
         .get(`/jogos/${gameId}/simples?tabuleiroSuperSimplificado=true`)
         .then((res) => {
-          loading.value = false;
           return res.data.data;
         })
         .catch((err) => {
-          loading.value = false;
           alert(err?.response?.data?.message);
           router.push({ name: "home" });
           return chess.value;
