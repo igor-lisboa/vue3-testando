@@ -9,12 +9,12 @@
         </router-link>
       </header>
 
-      <main class="px-3">
+      <main class="px-3 mt-3">
         <router-view />
       </main>
 
       <footer class="mt-auto text-white-50">
-        <p>
+        <p class="mt-3">
           Desenvolvido por
           <a
             href="https://github.com/igor-lisboa"

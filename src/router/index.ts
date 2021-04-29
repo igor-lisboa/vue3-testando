@@ -3,7 +3,8 @@ import { createWebHistory, createRouter } from 'vue-router';
 import Home from '../components/Home.vue'
 import Game from '../components/Game.vue'
 import SelectSide from '../components/SelectSide.vue'
-
+import PromotePawn from '../components/PromotePawn.vue'
+import EndGame from '../components/EndGame.vue'
 
 const routes = [
     {
@@ -24,7 +25,12 @@ const routes = [
     {
         path: '/game/:id/side/:sideId/promotePawn',
         name: 'promotePawn',
-        component: Game
+        component: PromotePawn
+    },
+    {
+        path: '/game/:id/side/:sideId/endGame',
+        name: 'endGame',
+        component: EndGame
     },
     {
         path: '/game/:id/side/:sideId/answerProposal/:type',

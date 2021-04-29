@@ -1,7 +1,9 @@
 <template>
   <template v-if="loading == false">
+    <div class="alert alert-light" role="alert">
+      {{ chess.tipoJogo }}
+    </div>
     <div
-      v-if="chess.finalizado == null"
       :class="
         'chessboard ' + (chess.ladoIdAtual == sideId ? 'borda-lado-da-vez' : '')
       "
@@ -30,9 +32,33 @@
         {{ item?.piece?.unicode }}
       </div>
     </div>
-    <div v-else>
-      <h1>{{ chess?.finalizado }}</h1>
+    <div class="mt-3" v-if="chess.tempoDeTurnoEmMilisegundos != -1">
+      <ul class="list-group w-25 m-auto">
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          Branco
+          <span class="badge bg-primary rounded-pill">{{
+            msToTime(chess.ladoBrancoTempoMilisegundosRestante).formated
+          }}</span>
+        </li>
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          Preto
+          <span class="badge bg-primary rounded-pill">{{
+            msToTime(chess.ladoPretoTempoMilisegundosRestante).formated
+          }}</span>
+        </li>
+      </ul>
     </div>
+
+    <button
+      class="btn btn-lg btn-light fw-bold border-white mt-3"
+      @click="leaveGame"
+    >
+      Desistir
+    </button>
   </template>
   <template v-else>
     <div class="spinner-border text-light" role="status">
@@ -61,7 +87,6 @@ export default defineComponent({
       id: number;
       acoesSolicitadas: { acao: string; ladoId: number }[];
       chequeLadoAtual: boolean;
-      empatePropostoPeloLadoId: number | null;
       tipoJogo: string;
       ladoBrancoTempoMilisegundosRestante: number;
       ladoPretoTempoMilisegundosRestante: number;
@@ -73,7 +98,6 @@ export default defineComponent({
       id: -1,
       acoesSolicitadas: [],
       chequeLadoAtual: false,
-      empatePropostoPeloLadoId: null,
       ladoBrancoTempoMilisegundosRestante: -1,
       ladoPretoTempoMilisegundosRestante: -1,
       tipoJogo: "",
@@ -121,7 +145,7 @@ export default defineComponent({
     });
 
     socket.on("uncaughtException", function (err) {
-      alert("Erro no socket");
+      alert("Socket error");
       console.log(err);
     });
 
@@ -247,11 +271,11 @@ export default defineComponent({
             {},
             { headers: { lado: sideId } }
           )
-          .then(async (res) => {
+          .then(async () => {
             await populateGame();
           })
           .catch(async (err) => {
-            alert(err.response.data.message);
+            alert(err?.response?.data?.message);
             await populateGame();
           });
       } else {
@@ -298,7 +322,7 @@ export default defineComponent({
             );
           })
           .catch((err) => {
-            alert(err.response.data.message);
+            alert(err?.response?.data?.message);
             cleanPossibleMovements();
           });
       }
@@ -320,21 +344,13 @@ export default defineComponent({
     };
 
     const populateGame = async () => {
-      const game: {
-        id: number;
-        acoesSolicitadas: { acao: string; ladoId: number }[];
-        chequeLadoAtual: boolean;
-        empatePropostoPeloLadoId: number | null;
-        tipoJogo: string;
-        tabuleiro: (string | null)[][];
-        tempoDeTurnoEmMilisegundos: number;
-        ladoIdAtual: number;
-        ladoBrancoTempoMilisegundosRestante: number;
-        ladoPretoTempoMilisegundosRestante: number;
-        finalizado: string | null;
-      } = await getGame(chessId);
+      chess.value = await getGame(chessId);
 
-      const requiredActionsForThisSide = game.acoesSolicitadas.filter(
+      if (chess.value.finalizado != null) {
+        router.push({ name: "endGame", params: { id: chessId, sideId } });
+      }
+
+      const requiredActionsForThisSide = chess.value.acoesSolicitadas.filter(
         (requiredAction) => requiredAction.ladoId == sideId
       );
       if (requiredActionsForThisSide.length > 0) {
@@ -364,7 +380,7 @@ export default defineComponent({
         }
       }
 
-      let gameBoardFlat: (string | null)[] = game.tabuleiro.flat();
+      let gameBoardFlat: (string | null)[] = chess.value.tabuleiro.flat();
 
       // if is the black side revert
       if (sideId == 1) {
@@ -372,7 +388,6 @@ export default defineComponent({
       }
 
       populateBoard(gameBoardFlat);
-      chess.value = game;
     };
 
     const populateBoard = (gameBoardFlat: (string | null)[]) => {
@@ -412,10 +427,62 @@ export default defineComponent({
       pieces.value = await getPieces();
     };
 
+    const leaveGame = async () => {
+      loading.value = true;
+      return await api
+        .delete(`/jogos/${chessId}/jogadores/${sideId}`)
+        .then(async (res) => {
+          loading.value = false;
+          alert(res.data.message);
+          await populateGame();
+        })
+        .catch(async (err) => {
+          loading.value = false;
+          alert(err?.response?.data?.message);
+          await populateGame();
+        });
+    };
+
+    const msToTime = (duration: number) => {
+      const seconds: number = Math.floor((duration / 1000) % 60);
+      const minutes: number = Math.floor((duration / (1000 * 60)) % 60);
+      const hours: number = Math.floor((duration / (1000 * 60 * 60)) % 24);
+
+      const hoursString: string = hours < 10 ? "0" + hours : hours.toString();
+      const minutesString: string =
+        minutes < 10 ? "0" + minutes : minutes.toString();
+      const secondsString: string =
+        seconds < 10 ? "0" + seconds : seconds.toString();
+      const formated: string = `${hoursString}:${minutesString}:${secondsString}`;
+
+      return {
+        seconds,
+        minutes,
+        hours,
+        formated,
+      };
+    };
+
+    const forceIa = async () => {
+      await api.get(`/ia`);
+    };
+
     onMounted(async () => {
       await populatePieces();
       await populateEquivalenceTable();
       await populateGame();
+
+      if (chess.value.tempoDeTurnoEmMilisegundos != -1) {
+        setInterval(() => {
+          if (chess.value.ladoIdAtual == 0) {
+            chess.value.ladoBrancoTempoMilisegundosRestante -= 1000;
+          } else {
+            chess.value.ladoPretoTempoMilisegundosRestante -= 1000;
+          }
+        }, 1000);
+      }
+
+      await forceIa();
     });
 
     return {
@@ -424,6 +491,8 @@ export default defineComponent({
       chess,
       getPossibleMovesOrMakeMove,
       loading,
+      leaveGame,
+      msToTime,
     };
   },
 });

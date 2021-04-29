@@ -32,6 +32,12 @@
     </template>
     <template v-else>
       <h1>Esse jogo não possui lados disponíveis</h1>
+      <button
+        class="btn btn-lg btn-light fw-bold border-white mt-3"
+        @click="goToHomePage"
+      >
+        Novo Jogo?
+      </button>
     </template>
   </template>
   <template v-else>
@@ -73,7 +79,7 @@ export default defineComponent({
         })
         .catch((err) => {
           loading.value = false;
-          alert(err.response.data.message);
+          alert(err?.response?.data?.message);
         });
     };
 
@@ -97,6 +103,10 @@ export default defineComponent({
       emptySides.value = await getGameEmptySides();
     };
 
+    const goToHomePage = () => {
+      router.push({ name: "home" });
+    };
+
     onMounted(async () => {
       await populateGameEmptySides();
     });
@@ -106,6 +116,7 @@ export default defineComponent({
       emptySides,
       enterInGame,
       loading,
+      goToHomePage,
     };
   },
 });
