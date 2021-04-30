@@ -100,17 +100,12 @@ export default defineComponent({
     const populateGame = async () => {
       chess.value = await getGame(chessId);
 
-      const requiredActionsForThisSide = chess.value.acoesSolicitadas.filter(
-        (requiredAction) => requiredAction.ladoId == sideId
+      const promotePawn = chess.value.acoesSolicitadas.find(
+        (requiredAction) =>
+          requiredAction.acao == "promocaoPeao" &&
+          requiredAction.ladoId == sideId
       );
-      if (requiredActionsForThisSide.length > 0) {
-        const promotePawn = requiredActionsForThisSide.find(
-          (requiredAction) => requiredAction.acao == "promocaoPeao"
-        );
-        if (promotePawn == undefined) {
-          router.push({ name: "game", params: { id: chessId, sideId } });
-        }
-      } else {
+      if (promotePawn == undefined) {
         router.push({ name: "game", params: { id: chessId, sideId } });
       }
     };

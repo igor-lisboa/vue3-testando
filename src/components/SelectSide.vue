@@ -1,7 +1,7 @@
 <template>
   <template v-if="loading == false">
     <template v-if="emptySides.length > 0">
-      <h1>Escolha um lado disponível para esse jogo</h1>
+      <h1>Escolha um lado disponível para jogar o jogo {{ chessId }}</h1>
       <p class="lead">Clique na opção desejada</p>
 
       <div class="mt-3">
@@ -58,6 +58,16 @@ export default defineComponent({
     const loading = ref(false);
     const selectedSide = ref<number | null>(null);
     const chessId: number = parseInt(route.params.id.toString());
+    const sideId = route.query.sideId?.toString();
+
+    if (sideId != undefined) {
+      if (sideId == "0") {
+        selectedSide.value = 0;
+      } else if (sideId == "1") {
+        selectedSide.value = 1;
+      }
+    }
+
     const emptySides = ref<{ id: number; lado: string }[]>([]);
 
     const enterInGame = async () => {
@@ -77,9 +87,10 @@ export default defineComponent({
           }
           return res.data.data;
         })
-        .catch((err) => {
+        .catch(async (err) => {
           loading.value = false;
           alert(err?.response?.data?.message);
+          await populateGameEmptySides();
         });
     };
 
@@ -117,6 +128,7 @@ export default defineComponent({
       enterInGame,
       loading,
       goToHomePage,
+      chessId,
     };
   },
 });

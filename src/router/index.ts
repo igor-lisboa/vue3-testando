@@ -5,6 +5,7 @@ import Game from '../components/Game.vue'
 import SelectSide from '../components/SelectSide.vue'
 import PromotePawn from '../components/PromotePawn.vue'
 import EndGame from '../components/EndGame.vue'
+import AnswerProposal from '../components/AnswerProposal.vue'
 
 const routes = [
     {
@@ -35,7 +36,7 @@ const routes = [
     {
         path: '/game/:id/side/:sideId/answerProposal/:type',
         name: 'answerProposal',
-        component: Game
+        component: AnswerProposal
     },
     {
         path: '/:pathMatch(.*)*',

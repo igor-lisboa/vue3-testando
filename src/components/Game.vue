@@ -1,7 +1,7 @@
 <template>
   <template v-if="loading == false">
     <div class="alert alert-light" role="alert">
-      {{ chess.tipoJogo }}
+      {{ chess.id }} | {{ chess.tipoJogo }}
     </div>
     <div
       :class="
@@ -53,12 +53,20 @@
       </ul>
     </div>
 
-    <button
-      class="btn btn-lg btn-light fw-bold border-white mt-3"
-      @click="leaveGame"
-    >
-      Desistir
-    </button>
+    <div class="btn-group" role="group">
+      <button
+        class="btn btn-lg btn-light fw-bold border-white mt-3"
+        @click="leaveGame"
+      >
+        Desistir
+      </button>
+      <button
+        class="btn btn-lg btn-danger fw-bold mt-3"
+        @click="proposeSomething('empate')"
+      >
+        Propõe Empate
+      </button>
+    </div>
   </template>
   <template v-else>
     <div class="spinner-border text-light" role="status">
@@ -71,7 +79,7 @@
 import { defineComponent, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "../api/index";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 export default defineComponent({
   name: "Game",
   setup: () => {
@@ -88,6 +96,7 @@ export default defineComponent({
       acoesSolicitadas: { acao: string; ladoId: number }[];
       chequeLadoAtual: boolean;
       tipoJogo: string;
+      ladosIdDeslogados: number[];
       ladoBrancoTempoMilisegundosRestante: number;
       ladoPretoTempoMilisegundosRestante: number;
       tabuleiro: (string | null)[][];
@@ -98,6 +107,7 @@ export default defineComponent({
       id: -1,
       acoesSolicitadas: [],
       chequeLadoAtual: false,
+      ladosIdDeslogados: [0, 1],
       ladoBrancoTempoMilisegundosRestante: -1,
       ladoPretoTempoMilisegundosRestante: -1,
       tipoJogo: "",
@@ -141,6 +151,7 @@ export default defineComponent({
     >([]);
 
     socket.on("adversarioEntrou", async () => {
+      alert("O adversário entrou na partida!");
       await populateGame();
     });
 
@@ -350,34 +361,41 @@ export default defineComponent({
         router.push({ name: "endGame", params: { id: chessId, sideId } });
       }
 
-      const requiredActionsForThisSide = chess.value.acoesSolicitadas.filter(
-        (requiredAction) => requiredAction.ladoId == sideId
+      if (chess.value.ladosIdDeslogados.includes(sideId)) {
+        router.push({
+          name: "selectSide",
+          params: { id: chessId },
+          query: {
+            sideId,
+          },
+        });
+      }
+
+      const promotePawn = chess.value.acoesSolicitadas.find(
+        (requiredAction) =>
+          requiredAction.acao == "promocaoPeao" &&
+          requiredAction.ladoId == sideId
       );
-      if (requiredActionsForThisSide.length > 0) {
-        const promotePawn = requiredActionsForThisSide.find(
-          (requiredAction) => requiredAction.acao == "promocaoPeao"
-        );
-        if (promotePawn != undefined) {
-          router.push({ name: "promotePawn", params: { id: chessId, sideId } });
-        }
-        const awnswerResetProposal = requiredActionsForThisSide.find(
-          (requiredAction) => requiredAction.acao == "responderPropostaReset"
-        );
-        if (awnswerResetProposal != undefined) {
-          router.push({
-            name: "answerProposal",
-            params: { id: chessId, sideId, type: "reset" },
-          });
-        }
-        const awnswerTieProposal = requiredActionsForThisSide.find(
-          (requiredAction) => requiredAction.acao == "responderPropostaEmpate"
-        );
-        if (awnswerTieProposal != undefined) {
-          router.push({
-            name: "answerProposal",
-            params: { id: chessId, sideId, type: "tie" },
-          });
-        }
+      if (promotePawn != undefined) {
+        router.push({ name: "promotePawn", params: { id: chessId, sideId } });
+      }
+      const awnswerResetProposal = chess.value.acoesSolicitadas.find(
+        (requiredAction) => requiredAction.acao == "responderPropostaReset"
+      );
+      if (awnswerResetProposal != undefined) {
+        router.push({
+          name: "answerProposal",
+          params: { id: chessId, sideId, type: "reset" },
+        });
+      }
+      const awnswerTieProposal = chess.value.acoesSolicitadas.find(
+        (requiredAction) => requiredAction.acao == "responderPropostaEmpate"
+      );
+      if (awnswerTieProposal != undefined) {
+        router.push({
+          name: "answerProposal",
+          params: { id: chessId, sideId, type: "tie" },
+        });
       }
 
       let gameBoardFlat: (string | null)[] = chess.value.tabuleiro.flat();
@@ -434,6 +452,26 @@ export default defineComponent({
         .then(async (res) => {
           loading.value = false;
           alert(res.data.message);
+          router.push({ name: "home" });
+        })
+        .catch(async (err) => {
+          loading.value = false;
+          alert(err?.response?.data?.message);
+          await populateGame();
+        });
+    };
+
+    const proposeSomething = async (action: string) => {
+      loading.value = true;
+      return await api
+        .put(
+          `/jogos/${chessId}/${action}/propoe`,
+          {},
+          { headers: { lado: sideId } }
+        )
+        .then(async (res) => {
+          loading.value = false;
+          alert(res.data.message);
           await populateGame();
         })
         .catch(async (err) => {
@@ -472,12 +510,25 @@ export default defineComponent({
       await populateEquivalenceTable();
       await populateGame();
 
-      if (chess.value.tempoDeTurnoEmMilisegundos != -1) {
-        setInterval(() => {
+      if (
+        chess.value.tempoDeTurnoEmMilisegundos != -1 &&
+        chess.value.ladosIdDeslogados.length == 0
+      ) {
+        setInterval(async () => {
           if (chess.value.ladoIdAtual == 0) {
-            chess.value.ladoBrancoTempoMilisegundosRestante -= 1000;
+            if (chess.value.ladoBrancoTempoMilisegundosRestante > 0) {
+              chess.value.ladoBrancoTempoMilisegundosRestante -= 1000;
+              if (chess.value.ladoBrancoTempoMilisegundosRestante <= 0) {
+                await populateGame();
+              }
+            }
           } else {
-            chess.value.ladoPretoTempoMilisegundosRestante -= 1000;
+            if (chess.value.ladoPretoTempoMilisegundosRestante > 0) {
+              chess.value.ladoPretoTempoMilisegundosRestante -= 1000;
+              if (chess.value.ladoPretoTempoMilisegundosRestante <= 0) {
+                await populateGame();
+              }
+            }
           }
         }, 1000);
       }
@@ -493,6 +544,7 @@ export default defineComponent({
       loading,
       leaveGame,
       msToTime,
+      proposeSomething,
     };
   },
 });
