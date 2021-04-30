@@ -11,7 +11,7 @@
               type="radio"
               class="btn-check"
               :id="'btnSelectedSide' + option.id"
-              :value="option.value"
+              :value="option.id"
               v-model="selectedOption"
             />
             <label
@@ -54,7 +54,7 @@ export default defineComponent({
     const sideId: number = parseInt(route.params.sideId.toString());
     const chessId: number = parseInt(route.params.id.toString());
     const type: string = route.params.type.toString();
-    const selectedOption = ref<boolean>(true);
+    const selectedOption = ref<number | null>(null);
     const proposal = ref<{
       acao: string;
       ladoId: number;
@@ -138,7 +138,7 @@ export default defineComponent({
         .post(
           `/jogos/${chessId}/${actionSufix.toLowerCase()}/responde`,
           {
-            resposta: selectedOption.value,
+            resposta: selectedOption.value == 0 ? true : false,
           },
           {
             headers: {
