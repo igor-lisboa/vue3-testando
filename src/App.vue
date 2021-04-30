@@ -20,8 +20,8 @@
             href="https://github.com/igor-lisboa"
             target="_blank"
             class="text-white"
-            >LISBÔA, Igor</a
-          >.
+            >Igor Lisbôa</a
+          >, usando a API <a class="text-white" href="https://github.com/igor-lisboa/tcc00339-gpms-xadrez-backend" target="_blank" rel="noopener noreferrer">tcc00339-gpms-xadrez-backend</a>.
         </p>
       </footer>
     </div>
