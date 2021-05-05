@@ -5,7 +5,9 @@
     </div>
     <div
       :class="
-        'chessboard ' + (chess.ladoIdAtual == sideId ? 'borda-lado-da-vez' : '')
+        'chessboard ' +
+        (chess.ladoIdAtual == sideId ? ' borda-lado-da-vez ' : '') +
+        (chess.tipoJogo == 'I.A. X I.A.' ? ' ia-versus-ia ' : '')
       "
     >
       <div
@@ -560,7 +562,7 @@ export default defineComponent({
 }
 
 .borda-lado-da-vez {
-  border: 8px solid blue;
+  border: 8px solid greenyellow;
 }
 
 .board-house:hover {
@@ -569,6 +571,10 @@ export default defineComponent({
 
 .board-house:active {
   background-color: blueviolet;
+}
+
+.ia-versus-ia {
+  pointer-events: none;
 }
 
 .board-house {
@@ -591,6 +597,7 @@ export default defineComponent({
 .black {
   background-color: #999;
 }
+
 .white {
   background-color: #fff;
 }
@@ -600,7 +607,7 @@ export default defineComponent({
 }
 
 .green {
-  background-color: greenyellow;
+  background-color: green;
 }
 
 .red {

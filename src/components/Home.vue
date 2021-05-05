@@ -113,7 +113,18 @@ export default defineComponent({
         })
         .then((res) => {
           loading.value = false;
-          router.push({ name: "selectSide", params: { id: res.data.data.id } });
+           // se n for IA x IA manda p select side caso contrario manda p jogo
+          if (typeId !== 2) {
+            router.push({
+              name: "selectSide",
+              params: { id: res.data.data.id },
+            });
+          } else {
+            router.push({
+              name: "game",
+              params: { id: res.data.data.id, sideId: 0 },
+            });
+          }
         })
         .catch((err) => {
           loading.value = false;
